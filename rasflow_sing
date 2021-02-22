@@ -1,0 +1,46 @@
+# Working folders need to be structured as such: 
+	# Create directory which will be bound with singularity on the /tmp level (call it "Bind", --bind ./Bind:/tmp). This will take care of problem of temporary files being written in singularity-based /tmp folder that would not have access to disk space otherwise.
+	# Create directory inside the Bind directory, which will hold entire analysis (call it "Analysis")
+	# After these steps, in a single directory we will have .simg container file and Bind/Analysis directory. 
+	# The Bind/Analysis directory must contain:
+	# 1) data folder containing files to be analyzed (best .cov format, .gz packed) and sample sheet
+	# 2) R workflow files
+	# Moreover, I think we bind our folder to singularity /tmp, cause nextflow can creata and change folders here??
+
+
+
+BootStrap: docker
+From: ubuntu:20.04
+
+
+
+%environment
+        export SHELL=/usr/bin/bash
+        export LC_ALL=C.UTF-8
+        export LANG=C.UTF-8
+        export PATH=$PATH:/root
+
+
+
+%post
+	apt update
+
+	apt install -y parallel build-essential vim git wget
+
+	#This is taken from qiime2 docker: https://hub.docker.com/layers/qiime2/core/2020.8/images/sha256-ba1de17a9cb12cc9a9b7bef623ac469267912a262f4c2b039503d5fe9fea0719?context=explore Im not so smart as to do it myself. Hope it works
+	wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
+	bash ~/miniconda.sh -b -p /opt/conda
+	rm ~/miniconda.sh
+	#/opt/conda/bin/conda clean -tipsy
+	ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh
+	echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc
+	# echo "conda activate base" >> ~/.bashrc
+	find /opt/conda/ -follow -type f -name '*.a' -delete 
+	find /opt/conda/ -follow -type f -name '*.js.map' -delete
+	/opt/conda/bin/conda clean -afy
+	export PATH="/opt/conda/bin:$PATH"
+        git clone https://github.com/zhxiaokang/RASflow.git
+        cd RASflow/
+        conda env create -n rasflow -f env.yaml
+        echo "conda activate rasflow" >> ~/.bashrc
+        
